@@ -165,8 +165,6 @@ class PizzaIngredients(Base):
     def __repr__(self):
         return f"<PizzaIngredients(PizzaID={self.PizzaID}, IngredientID={self.IngredientID}, DietaryInfo='{self.DietaryInfo}', Price={self.Price})>"
 
-from User import Customer, OrderInfo, Delivery, DeliveryPerson, LoginInformation, MenuItems, MenuItemsOrder, Pizza, PizzaIngredients, PizzaOrder, Ingredients
-
 # Create all tables
 Base.metadata.create_all(engine)
 
