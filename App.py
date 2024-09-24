@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-from db import add_user, get_user  # Assuming you have these in db.py
+from db import add_user, get_user
 
 class PizzaApp:
     def __init__(self, root):
