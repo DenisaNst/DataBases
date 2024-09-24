@@ -1,27 +1,14 @@
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Text, Date, Time, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Date, Time, Float, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from Setup_database import Base
 
-# Database setup
-username = 'root'
-password = 'anastasia23'
-host = 'localhost'
-port = '3306'
-database = 'project'
-engine = create_engine(f'mysql+pymysql://{username}:{password}@{host}:{port}/{database}', echo=True)
 
-metadata = MetaData(bind=engine)
-metadata.reflect(bind=engine)
-
-Base = declarative_base(metadata=metadata)
-
-# Customer model
 class Customer(Base):
     __tablename__ = 'Customers'
     CustomerID = Column(Integer, primary_key=True, autoincrement=True)
     Name = Column(Text)
     Gender = Column(Text)
-    Address = Column(String(255))  # Fixed spelling
+    Address = Column(String(255))
     Birthdate = Column(Date)
     Phone = Column(String(255))
 
@@ -166,10 +153,3 @@ class PizzaIngredients(Base):
     def __repr__(self):
         return f"<PizzaIngredients(PizzaID={self.PizzaID}, IngredientID={self.IngredientID}, DietaryInfo='{self.DietaryInfo}', Price={self.Price})>"
 
-# Create all tables
-Base.metadata.create_all(engine)
-
-# Session setup
-from sqlalchemy.orm import sessionmaker
-Session = sessionmaker(bind=engine)
-session = Session()

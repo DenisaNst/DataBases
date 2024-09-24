@@ -6,12 +6,11 @@ class PizzaApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Pizza Delivery App - Login or Sign Up")
-        self.root.geometry("600x500")  # Larger window size
+        self.root.geometry("600x500")
         self.create_login_signup_screen()
 
     def create_login_signup_screen(self):
         """Create the login/signup interface with form inputs."""
-        # Clear the window
         for widget in self.root.winfo_children():
             widget.destroy()
 
@@ -71,10 +70,10 @@ class PizzaApp:
         username = self.username_entry.get()
         password = self.password_entry.get()
 
-        user = get_user(username, password)  # Check with the database
+        user = get_user(username, password)
         if user:
             messagebox.showinfo("Login Success", f"Welcome, {username}!")
-            self.create_pizza_menu()  # Go to pizza menu after login
+            self.create_pizza_menu()
         else:
             messagebox.showerror("Login Failed", "Invalid credentials. Please try again.")
 
@@ -92,15 +91,15 @@ class PizzaApp:
             return
 
         try:
-            add_user(username, password, gender, address, phone, birthdate)  # Add user to the database
+            add_user(username, password, gender, address, phone, birthdate)
             messagebox.showinfo("Sign Up Success", "Account created successfully!")
-            self.create_login_signup_screen()  # Go back to login screen after successful sign-up
+            self.create_login_signup_screen()
         except Exception as e:
             messagebox.showerror("Sign Up Failed", f"An error occurred: {e}")
 
     def create_pizza_menu(self):
         """Create the pizza selection menu."""
-        # Clear the window
+
         for widget in self.root.winfo_children():
             widget.destroy()
 
