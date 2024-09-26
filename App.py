@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-from db import add_user, get_user
+from db import add_user, get_user, get_all_pizzas, session
 
 class PizzaApp:
     def __init__(self, root):
@@ -10,11 +10,9 @@ class PizzaApp:
         self.create_login_signup_screen()
 
     def create_login_signup_screen(self):
-        """Create the login/signup interface with form inputs."""
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        # Username and password fields
         tk.Label(self.root, text="Username:").pack(pady=5)
         self.username_entry = tk.Entry(self.root)
         self.username_entry.pack(pady=5)
@@ -23,18 +21,19 @@ class PizzaApp:
         self.password_entry = tk.Entry(self.root, show="*")
         self.password_entry.pack(pady=5)
 
-        # Login and Sign Up buttons
         tk.Button(self.root, text="Login", command=self.login_user).pack(pady=10)
         tk.Button(self.root, text="Sign Up", command=self.create_signup_screen).pack(pady=10)
 
     def create_signup_screen(self):
-        """Clear window and create the sign-up form with additional fields."""
         for widget in self.root.winfo_children():
             widget.destroy()
 
         tk.Label(self.root, text="Sign Up - Please fill in your details:").pack(pady=10)
 
-        # Fields for sign-up
+        tk.Label(self.root, text="Name:").pack(pady=5)
+        self.name_entry = tk.Entry(self.root)  # Changed to self.name_entry
+        self.name_entry.pack(pady=5)
+
         tk.Label(self.root, text="Username:").pack(pady=5)
         self.username_entry = tk.Entry(self.root)
         self.username_entry.pack(pady=5)
@@ -59,14 +58,10 @@ class PizzaApp:
         self.birthdate_entry = tk.Entry(self.root)
         self.birthdate_entry.pack(pady=5)
 
-        # Sign Up button
         tk.Button(self.root, text="Sign Up", command=self.signup_user).pack(pady=10)
-
-        # Back to login button
         tk.Button(self.root, text="Back to Login", command=self.create_login_signup_screen).pack(pady=5)
 
     def login_user(self):
-        """Handle login logic."""
         username = self.username_entry.get()
         password = self.password_entry.get()
 
@@ -78,7 +73,7 @@ class PizzaApp:
             messagebox.showerror("Login Failed", "Invalid credentials. Please try again.")
 
     def signup_user(self):
-        """Handle sign-up logic with additional fields."""
+        name = self.name_entry.get()  # Use the name_entry for Name
         username = self.username_entry.get()
         password = self.password_entry.get()
         gender = self.gender_entry.get()
@@ -86,31 +81,30 @@ class PizzaApp:
         phone = self.phone_entry.get()
         birthdate = self.birthdate_entry.get()
 
-        if not all([username, password, gender, address, phone, birthdate]):
+        if not all([name, username, password, gender, address, phone, birthdate]):
             messagebox.showerror("Sign Up Failed", "All fields are required!")
             return
 
         try:
-            add_user(username, password, gender, address, phone, birthdate)
+            add_user(name, username, password, gender, address, phone, birthdate)  # Pass name instead of username
             messagebox.showinfo("Sign Up Success", "Account created successfully!")
             self.create_login_signup_screen()
         except Exception as e:
             messagebox.showerror("Sign Up Failed", f"An error occurred: {e}")
 
     def create_pizza_menu(self):
-        """Create the pizza selection menu."""
-
         for widget in self.root.winfo_children():
             widget.destroy()
 
         tk.Label(self.root, text="Choose Your Pizza:").pack(pady=10)
-        tk.Button(self.root, text="Margherita", command=lambda: self.choose_pizza("Margherita")).pack(pady=5)
-        tk.Button(self.root, text="Pepperoni", command=lambda: self.choose_pizza("Pepperoni")).pack(pady=5)
-        tk.Button(self.root, text="Vegetarian", command=lambda: self.choose_pizza("Vegetarian")).pack(pady=5)
+        pizza_info = get_all_pizzas(session)
 
-    def choose_pizza(self, pizza_type):
-        """Handle pizza selection."""
-        messagebox.showinfo("Pizza Choice", f"You chose a {pizza_type} pizza!")
+        for pizza_name, pizza_price in pizza_info:
+            tk.Button(self.root, text=f"{pizza_name} - ${pizza_price}",
+                      command=lambda name=pizza_name: self.choose_pizza(name)).pack(pady=5)
+
+    def choose_pizza(self, pizza_name):
+        messagebox.showinfo("Pizza Choice", f"You chose a {pizza_name} pizza!")
 
 def main():
     root = tk.Tk()
