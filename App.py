@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
-from db import add_user, get_user, get_all_pizzas, session
+from db import add_user, get_user, get_all_pizzas, session, get_all_items, add_order
+from User import MenuItems, OrderInfo
+
 
 class PizzaApp:
     def __init__(self, root):
@@ -31,7 +33,7 @@ class PizzaApp:
         tk.Label(self.root, text="Sign Up - Please fill in your details:").pack(pady=10)
 
         tk.Label(self.root, text="Name:").pack(pady=5)
-        self.name_entry = tk.Entry(self.root)  # Changed to self.name_entry
+        self.name_entry = tk.Entry(self.root)
         self.name_entry.pack(pady=5)
 
         tk.Label(self.root, text="Username:").pack(pady=5)
@@ -73,7 +75,7 @@ class PizzaApp:
             messagebox.showerror("Login Failed", "Invalid credentials. Please try again.")
 
     def signup_user(self):
-        name = self.name_entry.get()  # Use the name_entry for Name
+        name = self.name_entry.get()
         username = self.username_entry.get()
         password = self.password_entry.get()
         gender = self.gender_entry.get()
@@ -86,7 +88,7 @@ class PizzaApp:
             return
 
         try:
-            add_user(name, username, password, gender, address, phone, birthdate)  # Pass name instead of username
+            add_user(name, username, password, gender, address, phone, birthdate)
             messagebox.showinfo("Sign Up Success", "Account created successfully!")
             self.create_login_signup_screen()
         except Exception as e:
@@ -97,19 +99,31 @@ class PizzaApp:
             widget.destroy()
 
         tk.Label(self.root, text="Choose Your Pizza:").pack(pady=10)
+
+        # Fetch pizza info with dynamically calculated prices
         pizza_info = get_all_pizzas(session)
 
+        # Display the pizzas with their dynamically calculated prices
         for pizza_name, pizza_price in pizza_info:
-            tk.Button(self.root, text=f"{pizza_name} - ${pizza_price}",
-                      command=lambda name=pizza_name: self.choose_pizza(name)).pack(pady=5)
+            tk.Button(self.root, text=f"{pizza_name} - ${pizza_price:.2f}",
+                      command=self.details_order).pack(pady=5)
 
-    def choose_pizza(self, pizza_name):
-        messagebox.showinfo("Pizza Choice", f"You chose a {pizza_name} pizza!")
+
+        menu_info = get_all_items(session)
+
+        for menu_items_name, menu_items_price in menu_info:
+            tk.Button(self.root, text=f"{menu_items_name} - ${menu_items_price:.2f}",
+                      command=self.details_order).pack(pady=5)
+
+    def details_order(self):
+        customer = self.name_entry.get()
+
+
 
 def main():
-    root = tk.Tk()
-    app = PizzaApp(root)
-    root.mainloop()
+        root = tk.Tk()
+        app = PizzaApp(root)
+        root.mainloop()
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-from User import Customer, LoginInformation, Pizza, Ingredient, PizzaIngredients
+from User import Customer, LoginInformation, Pizza, Ingredients, PizzaIngredients, MenuItems, OrderInfo
 from sqlalchemy.exc import IntegrityError
 
 engine = create_engine('mysql+pymysql://root:anastasia23@localhost/project', echo=True)
@@ -61,18 +61,57 @@ def get_all_pizzas(session):
     pizza_info = []
 
     for pizza in pizzas:
-        ingredient_costs = []
+        total_cost = 0
+        # Fetch ingredients associated with the pizza
+        ingredients = session.query(Ingredients).join(PizzaIngredients).filter(PizzaIngredients.PizzaID == pizza.PizzaID).all()
 
-        for pizza_ingredient in pizza.ingredients:
-            ingredient = session.query(Ingredient).filter_by(IngredientID=pizza_ingredient.IngredientID).first()
-            if ingredient:
-                ingredient_costs.append(ingredient.Price)
+        for ingredient in ingredients:
+            total_cost = total_cost + ingredient.Price
 
-        price = pizza.calculate_pizza_price(ingredient_costs)
-        pizza_info.append((pizza.Name, price))
+        final_price = total_cost * 1.4 * 1.09
+
+        pizza.Price = final_price
+        pizza_info.append((pizza.Name, final_price))
 
     return pizza_info
 
+def get_all_items(session):
+    menu_items = session.query(MenuItems).all()
+    menu_info = []
+
+    for menu_item in menu_items:
+        menu_info.append((menu_item.Name, menu_item.Price))
+
+    return menu_info
+
+def add_pizza_table(session, pizza_info):
+    for pizza in pizza_info:
+        try:
+            session.add(pizza.Price)
+            session.commit()
+            print(f"Pizza {pizza_info['name']} added successfully.")
+        except Exception as e:
+            session.rollback()
+            print(f"An error occurred: {e}")
+            raise
+
+
+
+#ORDERS!!!
+def add_order(customerid, date, time, price):
+
+
+    order_info = OrderInfo(CustomerID = customerid, Date =date, Time= time, Price=price)
+    session.add(order_info)
+
+    session.commit()
+    print(f"Order {order_info} added successfully.")
 
 def close_session():
     session.close()
+
+def main():
+    print(get_all_pizzas(session))
+
+if __name__ == "__main__":
+    main()

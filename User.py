@@ -93,22 +93,13 @@ class Pizza(Base):
     DietaryInfo = Column(String)
     Price = Column(Float)
 
-    ingredients = relationship("PizzaIngredients", back_populates="pizza")
+    # Use plural for clarity, since it's one pizza to many ingredients
+    condimente = relationship("PizzaIngredients", back_populates="pizza")
     orders = relationship("PizzaOrder", back_populates="pizza")
     menu_items = relationship("MenuItemsOrder", back_populates="pizza")
 
-    def calculate_pizza_price(self, ingredient_costs):
-        total_cost = sum(ingredient_costs)
-        profit_margin = 0.4
-        vat = 0.09
-
-        price_before_vat = total_cost + (total_cost * profit_margin)
-        final_price = price_before_vat + (price_before_vat * vat)
-
-        return round(final_price, 2)
-
     def __repr__(self):
-        return f"<Pizza(PizzaID={self.PizzaID}, Name='{self.Name}', Description='{self.Description}', Price={self.Price})>"
+        return f"<Pizza(PizzaID={self.PizzaID}, Name='{self.Name}', DietaryInfo='{self.DietaryInfo}')>"
 
 # PizzaOrder model
 class PizzaOrder(Base):
@@ -150,30 +141,29 @@ class Delivery(Base):
         return f"<Delivery(OrderNumber={self.OrderNumber}, DeliveryID={self.DeliveryID}, Status='{self.Status}', DeliveryTime='{self.DeliveryTime}')>"
 
 # Ingredients model
-class Ingredient(Base):
-    __tablename__ = 'Ingredient'
+class Ingredients(Base):
+    __tablename__ = 'Ingredients'
     IngredientID = Column(Integer, primary_key=True, autoincrement=True)
     Name = Column(Text)
     Price = Column(Float)
 
-    pizza_ingredients = relationship("PizzaIngredients", back_populates="ingredient")
+    pizza_ingredients = relationship("PizzaIngredients", back_populates="spice")
 
     def __repr__(self):
-        return f"<Ingredient(IngredientID={self.IngredientID}, Name='{self.Name}', Price={self.Price})>"
+        return f"<Ingredients(IngredientID={self.IngredientID}, Name='{self.Name}', Price={self.Price})>"
 
 class PizzaIngredients(Base):
     __tablename__ = 'PizzaIngredients'
     PizzaID = Column(Integer, ForeignKey('Pizza.PizzaID'), primary_key=True)
-    IngredientID = Column(Integer, ForeignKey('Ingredient.IngredientID'), primary_key=True)  # Changed to singular
+    IngredientID = Column(Integer, ForeignKey('Ingredients.IngredientID'), primary_key=True)
     DietaryInfo = Column(String)
     Price = Column(Float)
 
-    pizza = relationship("Pizza", back_populates="ingredients")
-    ingredient = relationship("Ingredient", back_populates="pizza_ingredients")
+    pizza = relationship("Pizza", back_populates="condimente")  # Make sure this matches with Pizza's 'ingredients'
+    spice = relationship("Ingredients", back_populates="pizza_ingredients")
 
     def __repr__(self):
         return f"<PizzaIngredients(PizzaID={self.PizzaID}, IngredientID={self.IngredientID}, DietaryInfo='{self.DietaryInfo}', Price={self.Price})>"
-
 # Create all tables
 Base.metadata.create_all(engine)
 
