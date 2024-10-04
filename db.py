@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-from User import Customer, LoginInformation, Pizza, Ingredients, PizzaIngredients, MenuItems, OrderInfo
+from User import Customer, LoginInformation, Pizza, Ingredients, PizzaIngredients, MenuItems, OrderInfo, PizzaOrder, \
+    MenuItemsOrder, OrderPrice
 from sqlalchemy.exc import IntegrityError
 
 engine = create_engine('mysql+pymysql://root:anastasia23@localhost/project', echo=True)
@@ -8,18 +9,17 @@ engine = create_engine('mysql+pymysql://root:anastasia23@localhost/project', ech
 Session = sessionmaker(bind=engine)
 session = Session()
 
-def add_user(name, username, password, gender, address, phone, birthdate):
+def add_user(name, password, gender, address, phone, birthdate):
 
     try:
-        customer = Customer(Name=name, Username =username, Gender=gender, Address=address, Phone=phone, Birthdate=birthdate)
+        customer = Customer(Name=name, Gender=gender, Address=address, Phone=phone, Birthdate=birthdate)
 
-        login_info = LoginInformation(Username=username, Password=password, customer=customer)
+        login_info = LoginInformation(Username=name, Password=password, customer=customer)
 
         session.add(customer)
         session.add(login_info)
 
         session.commit()
-        print(f"User {username} added successfully.")
     except IntegrityError:
         session.rollback()
         print("Error: Username already exists.")
@@ -96,16 +96,47 @@ def add_pizza_table(session, pizza_info):
             raise
 
 
-
 #ORDERS!!!
-def add_order(customerid, date, time, price):
-
-
-    order_info = OrderInfo(CustomerID = customerid, Date =date, Time= time, Price=price)
+def add_order(customerid, date, time):
+    order_info = OrderInfo(CustomerID = customerid, Date =date, Time= time)
     session.add(order_info)
 
     session.commit()
     print(f"Order {order_info} added successfully.")
+
+def add_order_price(order_number, price):
+    order_price = OrderPrice(OrderNumber = order_number, Price = price)
+    session.add(order_price)
+
+    session.commit()
+    print(f"Order Price {order_price} added successfully.")
+
+def add_pizza_order( username, pizza_name):
+
+    customerid = session.query(Customer).filter_by(Name= username).first().CustomerID
+
+    order_number = session.query(OrderInfo).filter_by(CustomerID = customerid).order_by(OrderInfo.OrderNumber.desc()).first().OrderNumber
+
+    pizza_id = session.query(Pizza).filter_by(Name=pizza_name).first().PizzaID
+
+    pizza_order = PizzaOrder(OrderNumber = order_number, PizzaID = pizza_id)
+    session.add(pizza_order)
+
+    session.commit()
+    print(f"Pizza Order {pizza_order} added successfully.")
+
+def add_menu_item_order(username , menu):
+    customerid = session.query(Customer).filter_by(Name=username).first().CustomerID
+
+    order_number = session.query(OrderInfo).filter_by(CustomerID = customerid).order_by(OrderInfo.OrderNumber.desc()).first().OrderNumber
+
+    menu_item_id = session.query(MenuItems).filter_by(Name=menu).first().MenuItemsID
+
+    menu_item_order = MenuItemsOrder(OrderNumber = order_number, MenuItemsID = menu_item_id)
+    session.add(menu_item_order)
+
+    session.commit()
+    print(f"Menu Item Order {menu_item_order} added successfully.")
 
 def close_session():
     session.close()

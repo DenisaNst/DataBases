@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
-from db import add_user, get_user, get_all_pizzas, session, get_all_items, add_order
-from User import MenuItems, OrderInfo
+from db import (add_user, get_user, get_all_pizzas, session, get_all_items, add_order, add_pizza_order,
+                add_menu_item_order, add_order_price)
+from User import MenuItems, OrderInfo, Customer, PizzaOrder, Pizza, MenuItemsOrder, OrderPrice
 
 
 class PizzaApp:
@@ -70,7 +71,8 @@ class PizzaApp:
         user = get_user(username, password)
         if user:
             messagebox.showinfo("Login Success", f"Welcome, {username}!")
-            self.create_pizza_menu()
+            self.create_pizza_menu(username)
+            self.details_order(username)
         else:
             messagebox.showerror("Login Failed", "Invalid credentials. Please try again.")
 
@@ -88,13 +90,13 @@ class PizzaApp:
             return
 
         try:
-            add_user(name, username, password, gender, address, phone, birthdate)
+            add_user(name, password, gender, address, phone, birthdate)
             messagebox.showinfo("Sign Up Success", "Account created successfully!")
             self.create_login_signup_screen()
         except Exception as e:
             messagebox.showerror("Sign Up Failed", f"An error occurred: {e}")
 
-    def create_pizza_menu(self):
+    def create_pizza_menu(self, username):
         for widget in self.root.winfo_children():
             widget.destroy()
 
@@ -106,17 +108,61 @@ class PizzaApp:
         # Display the pizzas with their dynamically calculated prices
         for pizza_name, pizza_price in pizza_info:
             tk.Button(self.root, text=f"{pizza_name} - ${pizza_price:.2f}",
-                      command=self.details_order).pack(pady=5)
-
+                      command=lambda pizza=pizza_name: add_pizza_order(username, pizza)).pack(pady=5)
 
         menu_info = get_all_items(session)
 
         for menu_items_name, menu_items_price in menu_info:
             tk.Button(self.root, text=f"{menu_items_name} - ${menu_items_price:.2f}",
-                      command=self.details_order).pack(pady=5)
+                      command=lambda menu = menu_items_name: add_menu_item_order(username, menu)).pack(pady=5)
 
-    def details_order(self):
-        customer = self.name_entry.get()
+        place_order = tk.Button(self.root, text="Place Order", command=lambda: self.place_order(username)).pack(pady=10)
+
+    def details_order(self, username):
+        from datetime import datetime
+        hour = datetime.now()
+
+        from datetime import date
+        today = date.today()
+
+        customerid = session.query(Customer).filter_by(Name=username).first().CustomerID
+        time = hour
+        date = today
+
+        add_order(customerid, date, time)
+        messagebox.showinfo("Added to the order", f"Continue shopping?")
+
+    def place_order(self,username):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        total_price=0
+        tk.Label(self.root, text="Order Details:").pack(pady=10)
+
+        customerid = session.query(Customer).filter_by(Name= username).first().CustomerID
+
+        order_number = session.query(OrderInfo).filter_by(CustomerID = customerid).order_by(OrderInfo.OrderNumber.desc()).first().OrderNumber
+
+        pizzas = session.query(Pizza) \
+            .join(PizzaOrder, Pizza.PizzaID == PizzaOrder.PizzaID) \
+            .filter(PizzaOrder.OrderNumber == order_number).all()
+
+        for pizza in pizzas:
+            label = tk.Label(self.root, text=f"Pizza: {pizza.Name}, Dietary Info: {pizza.DietaryInfo}, Price: {pizza.Price:.2f}")
+            total_price=total_price+pizza.Price
+            label.pack()
+
+        menu_items = session.query(MenuItems) \
+            .join(MenuItemsOrder, MenuItems.MenuItemsID == MenuItemsOrder.MenuItemsID) \
+            .filter(MenuItemsOrder.OrderNumber == order_number).all()
+
+        for menu_item in menu_items:
+            label2 = tk.Label(self.root, text=f"Menu_Item: {menu_item.Name}, Price: {menu_item.Price:.2f}")
+            total_price=total_price+menu_item.Price
+            label2.pack()
+
+        labelPrice = tk.Label(self.root, text=f"Total Price: {total_price:.2f}").pack()
+        add_order_price(order_number, total_price)
 
 
 

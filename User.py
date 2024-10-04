@@ -37,15 +37,24 @@ class OrderInfo(Base):
     CustomerID = Column(Integer, ForeignKey('Customers.CustomerID', ondelete='CASCADE', onupdate='CASCADE'))
     Date = Column(Date)
     Time = Column(Time)
-    Price = Column(Float)
 
     customer = relationship("Customer", back_populates="orders")
     menu_items = relationship("MenuItemsOrder", back_populates="order")
     pizza_orders = relationship("PizzaOrder", back_populates="order")
     delivery = relationship("Delivery", uselist=False, back_populates="order")
+    order_price = relationship("OrderPrice", uselist=False, back_populates="order")
 
     def __repr__(self):
-        return f"<OrderInfo(OrderNumber={self.OrderNumber}, CustomerID={self.CustomerID}, Date={self.Date}, Time={self.Time}, Price={self.Price})>"
+        return f"<OrderInfo(OrderNumber={self.OrderNumber}, CustomerID={self.CustomerID}, Date={self.Date}, Time={self.Time})>"
+
+class OrderPrice(Base):
+    __tablename__ = 'OrderPrice'
+    OrderNumber = Column(Integer, ForeignKey('OrderInfo.OrderNumber', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    Price = Column(Float)
+
+    order = relationship("OrderInfo", back_populates="order_price")
+    def __repr__(self):
+        return f"<OrderPrice(OrderNumber={self.OrderNumber}, Price={self.Price})>"
 
 # LoginInformation model
 class LoginInformation(Base):
@@ -76,14 +85,12 @@ class MenuItemsOrder(Base):
     __tablename__ = 'MenuItemsOrder'
     OrderNumber = Column(Integer, ForeignKey('OrderInfo.OrderNumber', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     MenuItemsID = Column(Integer, ForeignKey('MenuItems.MenuItemsID'))
-    PizzaID = Column(Integer, ForeignKey('Pizza.PizzaID'))
 
     order = relationship("OrderInfo", back_populates="menu_items")
     menu_item = relationship("MenuItems", back_populates="orders")
-    pizza = relationship("Pizza", back_populates="menu_items")
 
     def __repr__(self):
-        return f"<MenuItemsOrder(OrderNumber={self.OrderNumber}, MenuItemsID={self.MenuItemsID}, PizzaID={self.PizzaID})>"
+        return f"<MenuItemsOrder(OrderNumber={self.OrderNumber}, MenuItemsID={self.MenuItemsID})>"
 
 # Pizza model
 class Pizza(Base):
@@ -96,7 +103,6 @@ class Pizza(Base):
     # Use plural for clarity, since it's one pizza to many ingredients
     condimente = relationship("PizzaIngredients", back_populates="pizza")
     orders = relationship("PizzaOrder", back_populates="pizza")
-    menu_items = relationship("MenuItemsOrder", back_populates="pizza")
 
     def __repr__(self):
         return f"<Pizza(PizzaID={self.PizzaID}, Name='{self.Name}', DietaryInfo='{self.DietaryInfo}')>"
