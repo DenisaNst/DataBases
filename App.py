@@ -3,6 +3,7 @@ from tkinter import messagebox
 from db import (add_user, get_user, get_all_pizzas, session, get_all_items, add_order, add_pizza_order,
                 add_menu_item_order, add_order_price)
 from User import MenuItems, OrderInfo, Customer, PizzaOrder, Pizza, MenuItemsOrder, OrderPrice
+from sqlalchemy import func
 
 
 class PizzaApp:
@@ -68,11 +69,21 @@ class PizzaApp:
         username = self.username_entry.get()
         password = self.password_entry.get()
 
+        from datetime import datetime
+
         user = get_user(username, password)
         if user:
             messagebox.showinfo("Login Success", f"Welcome, {username}!")
             self.create_pizza_menu(username)
             self.details_order(username)
+
+            customer=session.query(Customer).filter_by(Name=username).first().Birthdate
+            birthmonth=func.month(customer)
+            birthday=func.day(customer)
+            print (birthmonth)
+            if birthmonth == datetime.now().month and birthday == datetime.now().day:
+                messagebox.showinfo("Birthday Discount", f"Happy Birthday, {username}!IT'S YOUR BIRTHDAY! YOU GET A FREE PIZZA AND A DRINK FROM US!")
+
         else:
             messagebox.showerror("Login Failed", "Invalid credentials. Please try again.")
 
@@ -130,7 +141,6 @@ class PizzaApp:
         date = today
 
         add_order(customerid, date, time)
-        messagebox.showinfo("Added to the order", f"Continue shopping?")
 
     def place_order(self,username):
         for widget in self.root.winfo_children():
@@ -149,7 +159,7 @@ class PizzaApp:
 
         for pizza in pizzas:
             label = tk.Label(self.root, text=f"Pizza: {pizza.Name}, Dietary Info: {pizza.DietaryInfo}, Price: {pizza.Price:.2f}")
-            total_price=total_price+pizza.Price
+            total_price=self.calculate_pizza_price(order_number, username)
             label.pack()
 
         menu_items = session.query(MenuItems) \
@@ -158,11 +168,58 @@ class PizzaApp:
 
         for menu_item in menu_items:
             label2 = tk.Label(self.root, text=f"Menu_Item: {menu_item.Name}, Price: {menu_item.Price:.2f}")
-            total_price=total_price+menu_item.Price
+            total_price= total_price+ self.calculate_menu_item_price(order_number, username)
             label2.pack()
 
+        # total_pizza_count = session.query(func.count(PizzaOrder.PizzaID)) \
+        #     .join(OrderInfo) \
+        #     .filter(OrderInfo.CustomerID == customerid).scalar()
+
         labelPrice = tk.Label(self.root, text=f"Total Price: {total_price:.2f}").pack()
+
         add_order_price(order_number, total_price)
+
+    def calculate_menu_item_price(self, order_number, username):
+        from datetime import datetime
+
+        total_price=0
+
+        customer=session.query(Customer).filter_by(Name=username).first().Birthdate
+        birthmonth=func.month(customer)
+        birthday=func.day(customer)
+
+        if birthmonth == datetime.now().month and birthday == datetime.now().day:
+            return 0
+        else:
+            menu_items = session.query(MenuItems) \
+                .join(MenuItemsOrder, MenuItems.MenuItemsID == MenuItemsOrder.MenuItemsID) \
+                .filter(MenuItemsOrder.OrderNumber == order_number).all()
+
+            for menu_item in menu_items:
+                total_price=total_price+menu_item.Price
+            return total_price
+
+
+
+    def calculate_pizza_price(self, order_number, username):
+        from datetime import datetime
+
+        total_price=0
+
+        customer=session.query(Customer).filter_by(Name=username).first().Birthdate
+        birthmonth=func.month(customer)
+        birthday=func.day(customer)
+
+        if birthmonth == datetime.now().month and birthday == datetime.now().day:
+            return 0
+        else:
+            pizzas = session.query(Pizza) \
+                .join(PizzaOrder, Pizza.PizzaID == PizzaOrder.PizzaID) \
+                .filter(PizzaOrder.OrderNumber == order_number).all()
+
+            for pizza in pizzas:
+                total_price=total_price+pizza.Price
+            return total_price
 
 
 
