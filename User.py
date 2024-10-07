@@ -43,6 +43,7 @@ class OrderInfo(Base):
     pizza_orders = relationship("PizzaOrder", back_populates="order")
     delivery = relationship("Delivery", uselist=False, back_populates="order")
     order_price = relationship("OrderPrice", uselist=False, back_populates="order")
+    order_delivery = relationship("OrderDeliveryTime", back_populates="order")
 
     def __repr__(self):
         return f"<OrderInfo(OrderNumber={self.OrderNumber}, CustomerID={self.CustomerID}, Date={self.Date}, Time={self.Time})>"
@@ -123,14 +124,13 @@ class PizzaOrder(Base):
 class DeliveryPerson(Base):
     __tablename__ = 'DeliveryPerson'
     DeliveryID = Column(Integer, primary_key=True, autoincrement=True)
-    Name = Column(String(100))
-    PhoneNumber = Column(String(20))
-    Address = Column(String(255))
+    AssignedArea = Column(String(255))
+    Availability = Column(Text)
 
     deliveries = relationship("Delivery", back_populates="delivery_person")
 
     def __repr__(self):
-        return f"<DeliveryPerson(DeliveryID={self.DeliveryID}, Name='{self.Name}', PhoneNumber='{self.PhoneNumber}', Address='{self.Address}')>"
+        return f"<DeliveryPerson(DeliveryID={self.DeliveryID}, AssignedArea='{self.AssignedArea}', Availability={self.Availability}')>"
 
 # Delivery model
 class Delivery(Base):
@@ -170,6 +170,24 @@ class PizzaIngredients(Base):
 
     def __repr__(self):
         return f"<PizzaIngredients(PizzaID={self.PizzaID}, IngredientID={self.IngredientID}, DietaryInfo='{self.DietaryInfo}', Price={self.Price})>"
+
+class Adress(Base):
+    __tablename__ = 'Adress'
+    ID = Column(Integer, primary_key = True)
+    Zone = Column(String)
+    Time = Column (Time)
+
+    def __repr__(self):
+        return f"<Adress(ID = {self.ID}, Zone = {self.Zone}, Time={self.Time})>"
+
+class OrderDeliveryTime(Base):
+    __tablename__ = 'OrderDeliveryTime'
+    OrderNumber = Column(Integer, ForeignKey('OrderInfo.OrderNumber'), primary_key = True)
+    TimeDelivery = Column (Time)
+
+    order = relationship("OrderInfo", back_populates="order_delivery")
+    def __repr__(self):
+        return f"<OrderDeliveryTime(OrderNumber = {self.OrderNumber}, TimeDelivery={self.TimeDelivery})>"
 # Create all tables
 Base.metadata.create_all(engine)
 

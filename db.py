@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 from User import Customer, LoginInformation, Pizza, Ingredients, PizzaIngredients, MenuItems, OrderInfo, PizzaOrder, \
-    MenuItemsOrder, OrderPrice
+    MenuItemsOrder, OrderPrice, OrderDeliveryTime, Delivery
 from sqlalchemy.exc import IntegrityError
 
 engine = create_engine('mysql+pymysql://root:anastasia23@localhost/project', echo=True)
@@ -137,6 +137,20 @@ def add_menu_item_order(username , menu):
 
     session.commit()
     print(f"Menu Item Order {menu_item_order} added successfully.")
+
+def add_time_delivery(order_number, arrival_time):
+    order_time = OrderDeliveryTime(OrderNumber = order_number, TimeDelivery = arrival_time)
+    session.add(order_time)
+
+    session.commit()
+    print(f"Order Time {order_time} added successfully.")
+
+def add_delivery(order_number, area_delivery_guy_ID, status, hour_confirmation):
+    delivery = Delivery(OrderNumber = order_number, DeliveryID = area_delivery_guy_ID, Status=status, DeliveryTime = hour_confirmation)
+    session.add(delivery)
+
+    session.commit()
+    print(f"Delivery {delivery} added successfully.")
 
 def close_session():
     session.close()
