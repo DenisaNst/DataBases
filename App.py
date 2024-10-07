@@ -258,9 +258,6 @@ class PizzaApp:
                 add_delivery(order_number, area_delivery_guy_ID, 'Undelivered', hour_confirmation)
         else:
             add_delivery(order_number, area_delivery_guy_ID, 'Undelivered', hour_confirmation)
-
-        # Update the delivery person's availability to "Unavailable" if there are no recent orders
-        if not recent_orders:
             area_delivery_guy.Availability = "Unavailable"
 
         print(area_delivery_guy_ID)
