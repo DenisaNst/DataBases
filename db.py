@@ -71,7 +71,7 @@ def get_all_pizzas(session):
         final_price = total_cost * 1.4 * 1.09
 
         pizza.Price = final_price
-        pizza_info.append((pizza.Name, final_price))
+        pizza_info.append((pizza.Name, pizza.DietaryInfo, final_price))
 
     return pizza_info
 

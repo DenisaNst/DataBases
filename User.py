@@ -188,6 +188,15 @@ class OrderDeliveryTime(Base):
     order = relationship("OrderInfo", back_populates="order_delivery")
     def __repr__(self):
         return f"<OrderDeliveryTime(OrderNumber = {self.OrderNumber}, TimeDelivery={self.TimeDelivery})>"
+
+class DiscountCode(Base):
+    __tablename__ = 'DiscountCode'
+    CodeID = Column(Integer, primary_key = True, autoincrement = True)
+    Code = Column(Text)
+    Discount = Column(Float)
+
+    def __repr__(self):
+        return f"<DiscountCode(CodeID= {self.CodeID}, Code = {self.Code}, Discount={self.Discount})>"
 # Create all tables
 Base.metadata.create_all(engine)
 

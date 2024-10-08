@@ -1,10 +1,9 @@
 import tkinter as tk
-from datetime import time
 from tkinter import messagebox, ttk
 from db import (add_user, get_user, get_all_pizzas, session, get_all_items, add_order, add_pizza_order,
                 add_menu_item_order, add_order_price, add_time_delivery, add_delivery)
 from User import MenuItems, OrderInfo, Customer, PizzaOrder, Pizza, MenuItemsOrder, OrderPrice, Adress, DeliveryPerson, \
-    Delivery
+    Delivery, DiscountCode
 
 
 class PizzaApp:
@@ -113,23 +112,34 @@ class PizzaApp:
         for widget in self.root.winfo_children():
             widget.destroy()
 
-        tk.Label(self.root, text="Choose Your Pizza:").pack(pady=10)
+        tk.Label(self.root, text="Choose Your Pizza:", font = 50).pack(pady=10)
 
         # Fetch pizza info with dynamically calculated prices
         pizza_info = get_all_pizzas(session)
 
         # Display the pizzas with their dynamically calculated prices
-        for pizza_name, pizza_price in pizza_info:
-            tk.Button(self.root, text=f"{pizza_name} - ${pizza_price:.2f}",
-                      command=lambda pizza=pizza_name: add_pizza_order(username, pizza)).pack(pady=5)
+        for pizza_name,  pizza_dietary_info, pizza_price in pizza_info:
+            tk.Button(self.root, text=f"{pizza_name} - {pizza_dietary_info} - ${pizza_price:.2f}",
+                      command=lambda pizza=pizza_name: add_pizza_order(username, pizza), font = 40).pack(pady=5)
 
         menu_info = get_all_items(session)
 
         for menu_items_name, menu_items_price in menu_info:
             tk.Button(self.root, text=f"{menu_items_name} - ${menu_items_price:.2f}",
-                      command=lambda menu = menu_items_name: add_menu_item_order(username, menu)).pack(pady=5)
+                      command=lambda menu = menu_items_name: add_menu_item_order(username, menu), font = 40).pack(pady=5)
 
-        place_order = tk.Button(self.root, text="Place Order", command=lambda: self.place_order(username)).pack(pady=10)
+        label_discount=tk.Label(self.root, text="Enter Discount Code:", font = 40)
+        label_discount.place(relx=1.0, rely=0.0, anchor='ne', x=-50, y=550)
+        entry_discount=tk.Entry(self.root, font=40)
+        entry_discount.place(relx=1.0, rely=0.0, anchor='ne', x=-50, y=600)
+
+        discount_code = entry_discount.get()
+
+
+        place_order = tk.Button(self.root, text="Place Order", command=lambda: self.place_order(username, discount_code), font = 40)
+        place_order.place(relx=1.0, rely=0.0, anchor='ne', x=-50, y=700)
+
+
 
     def details_order(self, username):
         from datetime import datetime
@@ -144,7 +154,7 @@ class PizzaApp:
 
         add_order(customerid, date, time)
 
-    def place_order(self,username):
+    def place_order(self,username, discount_code):
         for widget in self.root.winfo_children():
             widget.destroy()
 
@@ -160,28 +170,30 @@ class PizzaApp:
 
         if not pizzas:
             messagebox.showerror("Order Error", "You must select at least one pizza to place an order.")
-            return
-        tk.Label(self.root, text="Order Details:").pack(pady=10)
+            self.create_pizza_menu(username)
+        else:
+            tk.Label(self.root, text="Order Details:").pack(pady=10)
 
-        for pizza in pizzas:
-            label = tk.Label(self.root, text=f"Pizza: {pizza.Name}, Dietary Info: {pizza.DietaryInfo}, Price: {pizza.Price:.2f}")
-            total_price=self.calculate_pizza_price(order_number, username)
-            label.pack()
+            for pizza in pizzas:
+                label = tk.Label(self.root, text=f"Pizza: {pizza.Name}, Dietary Info: {pizza.DietaryInfo}, Price: {pizza.Price:.2f}")
+                total_price=self.calculate_pizza_price(order_number, username, discount_code)
+                label.pack()
 
-        menu_items = session.query(MenuItems) \
-            .join(MenuItemsOrder, MenuItems.MenuItemsID == MenuItemsOrder.MenuItemsID) \
-            .filter(MenuItemsOrder.OrderNumber == order_number).all()
+            menu_items = session.query(MenuItems) \
+                .join(MenuItemsOrder, MenuItems.MenuItemsID == MenuItemsOrder.MenuItemsID) \
+                .filter(MenuItemsOrder.OrderNumber == order_number).all()
 
-        for menu_item in menu_items:
-            label2 = tk.Label(self.root, text=f"Menu_Item: {menu_item.Name}, Price: {menu_item.Price:.2f}")
-            total_price= total_price+ self.calculate_menu_item_price(order_number, username)
-            label2.pack()
+            for menu_item in menu_items:
+                label2 = tk.Label(self.root, text=f"Menu_Item: {menu_item.Name}, Price: {menu_item.Price:.2f}")
+                total_price= total_price+ self.calculate_menu_item_price(order_number, username)
+                label2.pack()
 
-        labelPrice = tk.Label(self.root, text=f"Total Price: {total_price:.2f}").pack()
 
-        add_order_price(order_number, total_price)
+            labelPrice = tk.Label(self.root, text=f"Total Price: {total_price:.2f}").pack()
 
-        tk.Button(self.root, text="Confirm Order", command=lambda: self.confirmation_order(username)).pack(pady=10)
+            add_order_price(order_number, total_price)
+
+            tk.Button(self.root, text="Confirm Order", command=lambda: self.confirmation_order(username)).pack(pady=10)
 
     def confirmation_order(self, username):
         for widget in self.root.winfo_children():
@@ -217,7 +229,7 @@ class PizzaApp:
         tk.Button(self.root, text="Check Status", command=lambda: self.check_status( pizza_ready, time_arrival)).pack(pady=10)
         tk.Button(self.root, text="Cancel Order", command=lambda: self.cancel_order(hour, username)).pack(pady=10)
 
-        self.delivery_system(username, hour, order_number)
+        self.delivery_system(username, hour,order_number)
 
     def delivery_system(self, username, hour_confirmation, order_number):
         from datetime import datetime, timedelta
@@ -233,15 +245,31 @@ class PizzaApp:
 
         area_delivery_guy_ID = area_delivery_guy.DeliveryID
 
-        # Check for existing undelivered orders within a 3-minute window for the same postal code
-        three_minutes_ago = hour_confirmation - timedelta(minutes=3)
-        recent_orders = session.query(Delivery).join(DeliveryPerson).filter(
-            DeliveryPerson.AssignedArea == customer_address,
-            Delivery.DeliveryTime >= three_minutes_ago,
-            Delivery.Status == 'Undelivered'
-        ).all()
+        recent_orders = (
+            session.query(Delivery)
+            .join(OrderInfo, Delivery.OrderNumber == OrderInfo.OrderNumber)
+            .join(Customer, OrderInfo.CustomerID == Customer.CustomerID)
+            .filter(Customer.Address == customer.Address)
+            .all()
+        )
 
-        # Calculate the total number of pizzas in the recent orders
+        if not recent_orders:
+            three_minutes_ago = hour_confirmation - timedelta(minutes=3)
+        else :
+            delivery_time = recent_orders[0].DeliveryTime
+            delivery_datetime = datetime.combine(datetime.today(), delivery_time)
+            three_minutes_ago = delivery_datetime - timedelta(minutes=3)
+
+        recent_orders = (
+            session.query(Delivery)
+            .join(OrderInfo, Delivery.OrderNumber == OrderInfo.OrderNumber)
+            .join(Customer, OrderInfo.CustomerID == Customer.CustomerID)
+            .filter(Customer.Address == customer.Address).filter(Delivery.DeliveryTime >= three_minutes_ago)
+            .all()
+        )
+        print(recent_orders)
+
+    # Calculate the total number of pizzas in the recent orders
         total_pizzas = 0
         for order in recent_orders:
             total_pizzas += session.query(PizzaOrder).filter_by(OrderNumber=order.OrderNumber).count()
@@ -254,13 +282,10 @@ class PizzaApp:
         if total_pizzas <= 3:
             for order in recent_orders:
                 add_delivery(order.OrderNumber, area_delivery_guy_ID, 'Undelivered', hour_confirmation)
-            if current_order_pizzas == 0:
-                add_delivery(order_number, area_delivery_guy_ID, 'Undelivered', hour_confirmation)
+            add_delivery(order_number, area_delivery_guy_ID, 'Undelivered', hour_confirmation)
         else:
             add_delivery(order_number, area_delivery_guy_ID, 'Undelivered', hour_confirmation)
             area_delivery_guy.Availability = "Unavailable"
-
-        print(area_delivery_guy_ID)
         session.commit()
 
     def cancel_order(self, hour_confirm, username):
@@ -332,33 +357,35 @@ class PizzaApp:
         self.setting_labels(hour_now, pizza_ready, time_arrival)
 
 
-        tk.Button(self.root, text="Refresh 🔃", command=lambda: self.check_status(pizza_ready, time_arrival)).pack(pady=10)
-        tk.Button(self.root, text="Log Out", command=self.create_login_signup_screen).pack(pady=10)
+        refresh=tk.Button(self.root, text="Refresh 🔃", command=lambda: self.check_status(pizza_ready, time_arrival), font=("Helvetica", 24))
+        refresh.place(relx=0.5, rely=0.6, anchor='center')
+        logout=tk.Button(self.root, text="Log Out", command=self.create_login_signup_screen, font=("Helvetica", 24))
+        logout.place(relx=0.5, rely=0.7, anchor='center')
 
 
     def setting_labels(self, hour_now, pizza_ready, time_arrival):
 
         if hour_now < pizza_ready:
-            prepare=tk.Label(self.root, text="In preparation", font=500)
-            prepare.pack()
-            delivery=tk.Label(self.root, text="Being delivered")
-            delivery.pack()
-            delivered=tk.Label(self.root, text="Delivered! Bon appetite!🍕")
-            delivered.pack()
+            prepare = tk.Label(self.root, text="In preparation", font=("Helvetica", 24, "bold"))
+            prepare.place(relx=0.5, rely=0.3, anchor='center')
+            delivery = tk.Label(self.root, text="Being delivered", font=("Helvetica", 15, "bold"))
+            delivery.place(relx=0.5, rely=0.4, anchor='center')
+            delivered = tk.Label(self.root, text="Delivered! Bon appetite!🍕", font=("Helvetica", 15, "bold"))
+            delivered.place(relx=0.5, rely=0.5, anchor='center')
         elif hour_now < time_arrival:
-            prepare=tk.Label(self.root, text="In preparation", font=10, fg='green')
-            prepare.pack()
-            delivery=tk.Label(self.root, text="Being delivered", font=500)
-            delivery.pack()
-            delivered=tk.Label(self.root, text="Delivered! Bon appetite!🍕")
-            delivered.pack()
+            prepare = tk.Label(self.root, text="In preparation", font=("Helvetica", 15, "bold"), fg='green')
+            prepare.place(relx=0.5, rely=0.3, anchor='center')
+            delivery = tk.Label(self.root, text="Being delivered", font=("Helvetica", 24, "bold"))
+            delivery.place(relx=0.5, rely=0.4, anchor='center')
+            delivered = tk.Label(self.root, text="Delivered! Bon appetite!🍕", font=("Helvetica", 15, "bold"))
+            delivered.place(relx=0.5, rely=0.5, anchor='center')
         else:
-            prepare=tk.Label(self.root, text="In preparation", font=10, fg='green')
-            prepare.pack()
-            delivery=tk.Label(self.root, text="Being delivered", font=10, fg='green')
-            delivery.pack()
-            delivered=tk.Label(self.root, text="Delivered! Bon appetite!🍕", font=500)
-            delivered.pack()
+            prepare = tk.Label(self.root, text="In preparation", font=("Helvetica", 15, "bold"), fg='green')
+            prepare.place(relx=0.5, rely=0.3, anchor='center')
+            delivery = tk.Label(self.root, text="Being delivered", font=("Helvetica", 15, "bold"), fg='green')
+            delivery.place(relx=0.5, rely=0.4, anchor='center')
+            delivered = tk.Label(self.root, text="Delivered! Bon appetite!🍕", font=("Helvetica", 24, "bold"))
+            delivered.place(relx=0.5, rely=0.5, anchor='center')
 
     def calculate_menu_item_price(self, order_number, username):
         from datetime import datetime
@@ -397,7 +424,7 @@ class PizzaApp:
                 total_price=total_price+menu_item.Price
             return total_price
 
-    def calculate_pizza_price(self, order_number, username):
+    def calculate_pizza_price(self, order_number, username, discount_code):
         from datetime import datetime
 
         total_price=0
@@ -435,7 +462,16 @@ class PizzaApp:
 
             for pizza in pizzas:
                 total_price=total_price+pizza.Price
-            return total_price
+
+        # if discount_code:
+        #     discount_customer = session.query(DiscountCode).filter_by(Code=discount_code).first()
+        #     if discount_customer:
+        #         total_price = total_price - total_price * discount_customer.Discount
+        #     else:
+        #         messagebox.showerror("Error", "Discount code is invalid.")
+
+
+        return total_price
 
 def main():
         root = tk.Tk()
